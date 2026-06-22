@@ -29,15 +29,13 @@ export const DEFAULT_TOOL_ORDER: ToolOrder = {
   visible: [
     'new_topic',
     'attachment',
-    'thinking',
-    'web_search',
-    'url_context',
-    'knowledge_base',
     'mcp_tools',
-    'generate_image',
-    'mention_models'
+    'thinking',
+    'quick_phrases',
+    'clear_topic',
+    'toggle_expand'
   ],
-  hidden: ['quick_phrases', 'clear_topic', 'toggle_expand', 'new_context']
+  hidden: ['web_search', 'url_context', 'knowledge_base', 'generate_image', 'mention_models', 'new_context']
 }
 
 // Default tool order per scope
