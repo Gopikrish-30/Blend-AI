@@ -1,50 +1,77 @@
-# Blender Agent RW — Installation Guide
+# Blend-AI — Installation Guide (Linux)
 
-A full-stack AI Blender assistant: **Cherry Studio** (Electron AI chat) + **blender-mcp** (MCP server) + **Blender** (3D application), all wired together so an AI model can control Blender directly via natural language.
+AI-powered Blender assistant. Cherry Studio (Electron chat UI) talks to a local MCP server that controls Blender directly via Python. You type natural language, the AI calls Blender tools.
 
 ---
 
-## Option A — Docker (Recommended for Linux testers)
+## Option A — Docker (Recommended)
 
-Everything runs in one container with a virtual desktop accessible from any browser. No local installs needed except Docker.
+Everything runs inside one container. You get a full Linux desktop in your browser — no local Blender, Node.js, or Python required on the host.
 
-### Prerequisites
+### Requirements
 
-- Docker Engine ≥ 24 — https://docs.docker.com/engine/install/
-- Docker Compose ≥ 2 — bundled with Docker Desktop; on Linux: `sudo apt install docker-compose-plugin`
-- ~6 GB free disk space (image + layer cache)
+- Docker Engine ≥ 24
+- Docker Compose ≥ 2
+- ~6 GB free disk space
+- A modern browser (Chrome / Firefox)
+
+Install Docker if you don't have it:
+
+```bash
+curl -fsSL https://get.docker.com | sh
+sudo usermod -aG docker $USER
+newgrp docker            # apply group change without logout
+```
 
 ### Steps
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/<YOUR_REPO>.git blender-agent-rw
-cd blender-agent-rw
+git clone https://github.com/Gopikrish-30/Blend-AI.git
+cd Blend-AI
 
-# 2. Build and start (takes 5–15 min on first run)
+# 2. Build the Docker image (first run takes 10–20 min — downloads Blender, Node, etc.)
 docker compose up --build
 
-# 3. Open the desktop in your browser
+# 3. Open your browser and go to:
 #    http://localhost:6080
-#    Click "Connect" — no password required
+#    Click "Connect" — no password needed
 ```
 
-Inside the browser desktop you will see:
-- **Cherry Studio** — the AI chat interface (left)
-- **Blender** — the 3D viewport (right)
+Inside the browser desktop you will see Blender and Cherry Studio running side by side.
 
-The BlenderMCP addon is automatically enabled and the TCP socket is running. Cherry Studio will detect it and show **Connected** in the MCP settings.
+### Verify it works
 
-### Verify the Integration
+1. In Cherry Studio, go to **Settings → MCP Servers**
+2. "Blender MCP" should be **green** with **64 tools**
+3. Open a new chat, pick any AI model, and type:
 
-1. Open Cherry Studio inside the noVNC desktop
-2. Navigate to **Settings → MCP Servers** — confirm "Blender MCP" is green with 64 tools
-3. Start a new chat and send: `Check my Blender scene — what objects are in it?`
-4. The AI should call `get_scene_info` and return scene details (not plain text)
+   > Check my Blender scene — what objects are in it?
 
-### Adding API Keys (optional)
+4. The AI should call `get_scene_info` and describe the scene (not plain text)
 
-Pass keys via `docker-compose.yml` environment section:
+### Useful commands
+
+```bash
+# View live logs
+docker compose logs -f
+
+# Stop everything
+docker compose down
+
+# Full reset (deletes saved chat history too)
+docker compose down -v
+
+# Rebuild after you edit source files
+docker compose up --build
+
+# Open a shell inside the running container
+docker exec -it blend-ai bash
+```
+
+### Add API keys (optional)
+
+Edit `docker-compose.yml` and add keys under `environment`:
 
 ```yaml
 services:
@@ -56,210 +83,213 @@ services:
 
 Then restart: `docker compose up`
 
-### Persisting Data
-
-The compose file mounts two named volumes:
-- `cherry_studio_data` → Cherry Studio settings, SQLite DB, chat history
-- `uv_cache` → Python package cache (faster rebuilds)
-
-Data survives container restarts. To reset completely: `docker compose down -v`
-
-### Useful Commands
-
-```bash
-# View logs
-docker compose logs -f
-
-# Open a shell inside the container
-docker exec -it blender-agent-rw bash
-
-# Stop everything
-docker compose down
-
-# Rebuild after code changes
-docker compose up --build
-```
-
 ---
 
-## Option B — Native Linux (Ubuntu 22.04 / 24.04)
+## Option B — Native Linux Setup
 
-Run everything directly on your Linux machine — faster, no virtual desktop needed.
+Run everything directly on your machine. Faster than Docker once set up.
 
-### Prerequisites
+**Tested on:** Ubuntu 22.04 / 24.04
 
-| Requirement | Version | Install |
-|---|---|---|
-| Node.js | `>=24.11.1 <24.16.0` | See below |
-| pnpm | `11.8.0` | `npm i -g pnpm@11.8.0` |
-| uv | latest | `curl -LsSf https://astral.sh/uv/install.sh \| sh` |
-| Python | `>=3.10` | System or `uv python install 3.12` |
-| Blender | `>=3.0` | https://www.blender.org/download/ |
-| Git | any | `sudo apt install git` |
+### Step 1 — Install system dependencies
 
-### 1. Install Node.js 24
+```bash
+sudo apt-get update
+sudo apt-get install -y git curl build-essential python3 python3-pip python3-venv
+```
+
+### Step 2 — Install Node.js 24
+
+Cherry Studio requires Node.js `>=24.11.1 <24.16.0`.
 
 ```bash
 curl -fsSL https://deb.nodesource.com/setup_24.x | sudo bash -
 sudo apt-get install -y nodejs
-node --version   # must be >=24.11.1 and <24.16.0
+node --version    # confirm output is 24.x.x
 ```
 
-### 2. Install pnpm and uv
+### Step 3 — Install pnpm 11.8.0
 
 ```bash
 npm install -g pnpm@11.8.0
-curl -LsSf https://astral.sh/uv/install.sh | sh
-source ~/.bashrc   # or reload your shell
+pnpm --version    # confirm 11.8.0
 ```
 
-### 3. Clone and Set Up
+### Step 4 — Install uv (Python package manager)
 
 ```bash
-git clone https://github.com/<YOUR_REPO>.git blender-agent-rw
-cd blender-agent-rw
+curl -LsSf https://astral.sh/uv/install.sh | sh
+source ~/.bashrc        # or: source ~/.zshrc  — reload PATH
+uv --version            # confirm it's installed
 ```
 
-### 4. Install blender-mcp dependencies
+### Step 5 — Clone the repository
+
+```bash
+git clone https://github.com/Gopikrish-30/Blend-AI.git
+cd Blend-AI
+```
+
+### Step 6 — Set up the MCP server (blender-mcp)
 
 ```bash
 cd blender-mcp
-uv sync          # creates .venv with all Python dependencies
+uv sync               # creates .venv with all Python dependencies
 cd ..
 ```
 
-### 5. Install Cherry Studio dependencies
+Test it works:
 
 ```bash
-cd cherry-studio
-pnpm install
+cd blender-mcp
+uv run blender-mcp
+# Expected output:
+#   BlenderMCP is an MCP server and is meant to be launched by your MCP client...
+# Press Ctrl-C to exit
 cd ..
 ```
 
-### 6. Install the Blender Addon
-
-1. Open **Blender**
-2. Go to **Edit → Preferences → Add-ons → Install**
-3. Navigate to `blender-agent-rw/blender-mcp/addon.py` and click **Install Add-on**
-4. Enable the checkbox next to **Blender MCP**
-5. In the **3D Viewport**, press **N** to open the side panel → click the **BlenderMCP** tab
-6. Enable the integrations you want (PolyHaven, Sketchfab, etc.)
-7. The server starts automatically — you should see **Connected** in the panel
-
-### 7. Run Cherry Studio
+### Step 7 — Install Cherry Studio dependencies
 
 ```bash
 cd cherry-studio
+pnpm install          # installs all Node dependencies (~2–4 min)
+cd ..
+```
+
+### Step 8 — Install Blender
+
+Download from https://www.blender.org/download/ or via apt (if your distro has a recent version):
+
+```bash
+sudo apt-get install -y blender
+blender --version     # confirm 3.0 or higher
+```
+
+### Step 9 — Install the Blender addon
+
+1. Open Blender
+2. Go to **Edit → Preferences → Add-ons**
+3. Click **Install** (top right)
+4. Navigate to `Blend-AI/blender-mcp/addon.py` and click **Install Add-on**
+5. Enable the checkbox next to **BlenderMCP**
+6. In the **3D Viewport**, press **N** to open the sidebar → click the **BlenderMCP** tab
+7. The status should show **Running on port 9876**
+
+### Step 10 — Start Cherry Studio
+
+Open a new terminal:
+
+```bash
+cd Blend-AI/cherry-studio
 pnpm dev
 ```
 
-Cherry Studio opens. On first launch, the seeder runs automatically:
-- Configures "Blender MCP" server pointing to your local `blender-mcp/` directory
-- Creates the "Blender Assistant" with the expert system prompt
+Cherry Studio will open. On the first launch the seeder runs automatically and:
+- Creates the **Blender MCP** server entry pointing to your local `blender-mcp/` directory
+- Creates the **Blender Assistant** with the expert system prompt
 
-### 8. Verify
+### Step 11 — Add an AI model
 
-1. Open **Settings → MCP Servers** — "Blender MCP" should show green with 64 tools
-2. Start a new chat, select the `llama-3.3-70b-versatile` model (Groq)
-3. Send: `Check my Blender scene — what objects are in it?`
-4. The AI should call `get_scene_info` and describe your scene
+Cherry Studio needs an AI provider with tool-calling support.
+
+**Groq (free, fast — recommended for testing):**
+
+1. Get a free API key at https://console.groq.com
+2. In Cherry Studio: **Settings → Model Providers → Groq** → paste your key → Save
+3. Add the model `llama-3.3-70b-versatile` — make sure **Function Call** is checked
+
+**Other providers:** OpenAI, Anthropic, Google, etc. all work — just add their API key in Settings.
+
+### Step 12 — Verify the full stack
+
+1. Blender is open with the BlenderMCP addon enabled (Step 9)
+2. Cherry Studio is running (Step 10)
+3. Go to **Settings → MCP Servers** → "Blender MCP" should be **green with 64 tools**
+4. Start a new chat, select the Blender Assistant, and send:
+
+   > What objects are in my Blender scene?
+
+5. The AI should call `get_scene_info` and return scene details
 
 ---
 
 ## Troubleshooting
 
-### MCP shows 0 tools or is red
+### MCP server shows 22 tools instead of 64
 
-The MCP server failed to start. Check:
+The seeder is pointing to the PyPI version instead of your local code. Fix:
 
 ```bash
-# Test the MCP server manually
-cd blender-agent-rw/blender-mcp
-uv run blender-mcp
-# Should print: "BlenderMCP is an MCP server and is meant to be launched by your MCP client..."
-# Press Ctrl-C to exit
-```
-
-If `uv run blender-mcp` errors:
-```bash
-uv sync        # re-create the virtual environment
-uv run blender-mcp
-```
-
-### MCP shows 22 tools instead of 64
-
-Cherry Studio is using the **PyPI version** instead of the local one. This means `BLENDER_MCP_DIR` is not set or the path is wrong.
-
-Fix: Set the env var before launching Cherry Studio:
-```bash
-export BLENDER_MCP_DIR="/absolute/path/to/blender-agent-rw/blender-mcp"
+export BLENDER_MCP_DIR="$(pwd)/blender-mcp"
 cd cherry-studio && pnpm dev
 ```
 
-Or verify the path Cherry Studio resolved by checking the MCP server's command in **Settings → MCP Servers → Blender MCP → Edit**.
+Or check what path Cherry Studio resolved: **Settings → MCP Servers → Blender MCP → Edit** — the `--directory` argument should point to your local `Blend-AI/blender-mcp` folder.
 
-### AI responds with plain text instead of calling tools
+### MCP server is red / 0 tools
 
-The model does not have `function-call` capability registered. Run this check:
+The MCP process failed to start. Test it manually:
 
 ```bash
-# Find the Cherry Studio data directory
-# Linux native: ~/.config/CherryStudio/data/data.sqlite
-# Docker:       in the cherry_studio_data volume (/root/.config/CherryStudio/...)
-
-sqlite3 ~/.config/CherryStudio/data/data.sqlite \
-  "SELECT model_id, capabilities FROM user_model WHERE model_id LIKE '%llama%70b%'"
+cd Blend-AI/blender-mcp
+uv run blender-mcp
 ```
 
-The `capabilities` column must contain `["function-call"]`. If it's empty, re-add the model in Cherry Studio Settings → Models.
+If that errors, re-run `uv sync` first.
+
+### AI replies with plain text instead of calling tools
+
+The model doesn't have Function Call capability registered. In Cherry Studio: **Settings → Models** → find the model → make sure **Function Call** is ticked.
 
 ### Blender MCP socket not connecting
 
-1. Make sure Blender is open (not running headless with `-b`)
-2. The BlenderMCP addon must be enabled — check **Edit → Preferences → Add-ons**
-3. The TCP server starts automatically; verify in the **N panel → BlenderMCP tab** — status should say "Running"
-4. Default port is `9876` — make sure nothing else is using it:
-   ```bash
-   ss -tlnp | grep 9876
-   ```
+- Blender must be open (not running headless with `-b`)
+- The BlenderMCP addon must be enabled — check **Edit → Preferences → Add-ons**
+- Port 9876 must be free:
+  ```bash
+  ss -tlnp | grep 9876    # should show no output if free
+  ```
 
-### Docker: noVNC blank screen
+### `pnpm install` fails with "frozen lockfile" error
 
-Xvfb or Openbox failed to start. Check logs:
+The `pnpm-lock.yaml` file must be present. If it's missing:
+
 ```bash
-docker compose logs blender-agent | head -50
+cd cherry-studio
+pnpm install --no-frozen-lockfile
 ```
 
-Look for `ERROR: Xvfb failed to start` and ensure your host has `libx11` available for the container.
+### Docker: blank screen in browser
 
-### Docker: `pnpm install` fails with lockfile error
+Xvfb failed to start. Check logs:
 
-The `pnpm-lock.yaml` must be present in the build context. Verify it was not accidentally added to `.dockerignore`:
 ```bash
-grep pnpm-lock .dockerignore   # should return nothing
+docker compose logs blender-agent | head -60
 ```
+
+Look for `ERROR: Xvfb failed to start`.
 
 ---
 
 ## Repository Structure
 
 ```
-blender-agent-rw/
-├── blender-mcp/              # Python MCP server + Blender addon
-│   ├── addon.py              # Blender addon (install this into Blender)
+Blend-AI/
+├── blender-mcp/                  # Python MCP server + Blender addon
+│   ├── addon.py                  # Install this file into Blender
 │   ├── src/blender_mcp/
-│   │   └── server.py         # FastMCP server — 64 tools
+│   │   └── server.py             # FastMCP server — 64 tools
 │   └── pyproject.toml
-├── cherry-studio/            # Electron AI chat application
+├── cherry-studio/                # Electron AI chat application (modified)
 │   └── src/
-│       ├── main/             # Electron main process
-│       └── renderer/         # React UI
-├── Dockerfile                # Full-stack container (Blender + Cherry Studio)
-├── docker-compose.yml        # Compose with named volumes
-├── entrypoint.sh             # Container startup sequence
-├── enable_addon.py           # Blender Python startup script
-├── INSTALL.md                # This file
-└── DOCKER.md                 # Docker-specific docs
+│       ├── main/data/db/seeding/ # Blender Assistant + MCP seeder
+│       └── shared/data/presets/  # blenderAssistant.ts — system prompt
+├── Dockerfile                    # Full container: Blender + Cherry Studio
+├── docker-compose.yml
+├── entrypoint.sh                 # Container startup sequence
+├── enable_addon.py               # Blender auto-enable script (used in Docker)
+└── INSTALL.md                    # This file
 ```
 
 ---
@@ -271,7 +301,5 @@ blender-agent-rw/
 | `BLENDER_MCP_DIR` | auto-detected | Absolute path to the `blender-mcp/` directory |
 | `BLENDER_HOST` | `localhost` | Host where Blender's TCP socket is running |
 | `BLENDER_PORT` | `9876` | Port of Blender's TCP socket |
-| `ELECTRON_DISABLE_SANDBOX` | unset | Set to `1` in Docker (required for Chromium in container) |
-| `DISPLAY` | unset | Set to `:99` in Docker (Xvfb virtual display) |
-| `BLENDERMCP_SKETCHFAB_API_KEY` | unset | Sketchfab API key |
-| `BLENDERMCP_HYPER3D_API_KEY` | unset | Hyper3D Rodin API key |
+| `BLENDERMCP_SKETCHFAB_API_KEY` | unset | Sketchfab asset downloads |
+| `BLENDERMCP_HYPER3D_API_KEY` | unset | Hyper3D Rodin 3D generation |
