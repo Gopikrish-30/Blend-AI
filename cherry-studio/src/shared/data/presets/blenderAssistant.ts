@@ -295,7 +295,7 @@ export const BLENDER_ASSISTANT_SEED = {
   emoji: BLENDER_ASSISTANT_EMOJI,
   prompt: BLENDER_ASSISTANT_PROMPT,
   description: 'Senior Blender AI agent — plans before executing, thinks spatially, handles errors, and verifies every scene.',
-  modelId: null as string | null,
+  modelId: 'groq::llama-3.3-70b-versatile' as string | null,
   settings: {
     ...DEFAULT_ASSISTANT_SETTINGS,
     mcpMode: 'auto' as const,

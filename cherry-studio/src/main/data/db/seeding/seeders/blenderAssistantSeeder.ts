@@ -1,7 +1,7 @@
 import { assistantTable } from '@data/db/schemas/assistant'
 import { insertWithOrderKey } from '@data/services/utils/orderKey'
 import { BLENDER_ASSISTANT_SEED } from '@shared/data/presets/blenderAssistant'
-import { isNull, eq } from 'drizzle-orm'
+import { eq, isNull } from 'drizzle-orm'
 
 import type { DbType, ISeeder } from '../../types'
 import { hashObject } from '../hashObject'
@@ -19,19 +19,21 @@ export class BlenderAssistantSeeder implements ISeeder {
   async run(db: DbType): Promise<void> {
     await db.transaction(async (tx) => {
       const [existing] = await tx
-        .select({ id: assistantTable.id })
+        .select({ id: assistantTable.id, modelId: assistantTable.modelId })
         .from(assistantTable)
         .where(eq(assistantTable.name, BLENDER_ASSISTANT_SEED.name))
         .limit(1)
 
       if (existing) {
-        // Update the prompt and settings so changes propagate on version bump
+        // Update prompt/settings on version bump.
+        // Only set modelId if the user hasn't picked one yet — don't overwrite their choice.
         await tx
           .update(assistantTable)
           .set({
             prompt: BLENDER_ASSISTANT_SEED.prompt,
             description: BLENDER_ASSISTANT_SEED.description,
-            settings: { ...BLENDER_ASSISTANT_SEED.settings }
+            settings: { ...BLENDER_ASSISTANT_SEED.settings },
+            ...(existing.modelId == null ? { modelId: BLENDER_ASSISTANT_SEED.modelId } : {})
           })
           .where(eq(assistantTable.id, existing.id))
         return
