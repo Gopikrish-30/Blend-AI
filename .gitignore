@@ -1,0 +1,46 @@
+# ── Claude Code internal ──────────────────────────────────────────────────────
+.claude/
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.eggs/
+blender-mcp/.venv/
+blender-mcp/.python-version
+
+# ── Node / pnpm ───────────────────────────────────────────────────────────────
+node_modules/
+cherry-studio/node_modules/
+cherry-studio/dist/
+cherry-studio/out/
+cherry-studio/build/
+cherry-studio/.tanstack/
+cherry-studio/.tsbuildinfo
+
+# ── Electron user data (runtime, not source) ─────────────────────────────────
+cherry-studio/data/
+
+# ── Env / secrets ────────────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ── Docker ────────────────────────────────────────────────────────────────────
+# Keep: Dockerfile, docker-compose.yml, .dockerignore, entrypoint.sh
+# Nothing extra to ignore here
+
+# ── Blender temp files ────────────────────────────────────────────────────────
+*.blend1
+*.blend2
+/blender_scripts/

@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  blender-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: blender-agent-rw:latest
+    container_name: blender-agent-rw
+    ports:
+      - "6080:6080" # noVNC Web Interface (view desktop at http://localhost:6080)
+      - "5900:5900" # Raw VNC connection port
+      - "9876:9876" # Blender MCP Socket server port
+    volumes:
+      # Persist Electron userData directory (settings, SQLite database, downloaded assets)
+      - cherry_studio_data:/root/.config/CherryStudio
+      # Persist UV tool cache / python virtualenvs for faster rebuilds
+      - uv_cache:/root/.cache/uv
+    ipc: host # Enable shared memory for UI performance
+    security_opt:
+      - seccomp:unconfined # Necessary for Chromium sandbox (even if disabled)
+    restart: unless-stopped
+
+volumes:
+  cherry_studio_data:
+  uv_cache:

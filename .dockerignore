@@ -1,0 +1,26 @@
+# Git
+.git
+.gitignore
+
+# Python
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+blender-mcp/.venv/
+blender-mcp/.python-version
+blender-mcp/src/blender_mcp.egg-info/
+# NOTE: uv.lock is intentionally kept — needed for deterministic uv sync
+
+# Node / Electron
+cherry-studio/node_modules/
+cherry-studio/out/
+cherry-studio/build/
+cherry-studio/.tanstack/
+cherry-studio/dist/
+cherry-studio/.tsbuildinfo
+# NOTE: pnpm-lock.yaml is intentionally kept — needed for pnpm install --frozen-lockfile
+
+# OS files
+.DS_Store
+Thumbs.db
