@@ -84,16 +84,7 @@ export type AssistantTabSortType = 'tags' | 'list'
 
 export type SidebarFavorite =
   | 'assistants'
-  | 'agents'
-  | 'store'
-  | 'paintings'
-  | 'translate'
-  | 'mini_app'
-  | 'knowledge'
   | 'files'
-  | 'code_tools'
-  | 'notes'
-  | 'openclaw'
   | 'blender'
 
 /** @deprecated Legacy v1 Redux naming. Use SidebarFavorite for v2 sidebar preferences. */

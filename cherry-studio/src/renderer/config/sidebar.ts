@@ -1,4 +1,3 @@
-import { OpenClawSidebarIcon } from '@renderer/components/Icons/SvgIcon'
 import type { SidebarMenuItem } from '@renderer/components/Sidebar/types'
 import {
   getTabInstanceAppId,
@@ -8,18 +7,7 @@ import {
 import type { Tab } from '@shared/data/cache/cacheValueTypes'
 import type { SidebarIcon } from '@shared/data/preference/preferenceTypes'
 import { getDefaultValue } from '@shared/data/preference/preferenceUtils'
-import {
-  Code,
-  FileSearch,
-  Folder,
-  Languages,
-  LayoutGrid,
-  Library,
-  MessageSquare,
-  MousePointerClick,
-  NotepadText,
-  Palette
-} from 'lucide-react'
+import { Folder, MessageSquare } from 'lucide-react'
 
 /**
  * Context passed to sidebar navigation handlers. Carries per-call state the
@@ -93,61 +81,9 @@ export const SIDEBAR_APPS: readonly SidebarApp[] = [
     }
   },
   {
-    id: 'agents',
-    icon: MousePointerClick,
-    routePrefix: '/app/agents',
-    instanceKey: {
-      keyFromUrl: (url) => getNormalConversationSearchParamFromUrl(url, 'sessionId'),
-      defaultKey: ({ lastUsedSessionId }) => lastUsedSessionId ?? undefined,
-      urlForKey: (key) => `/app/agents?sessionId=${encodeURIComponent(key)}`
-    }
-  },
-  {
-    id: 'paintings',
-    icon: Palette,
-    routePrefix: '/app/paintings',
-    resolveUrl: ({ defaultPaintingProvider }) => `/app/paintings/${defaultPaintingProvider}`
-  },
-  {
-    id: 'translate',
-    icon: Languages,
-    routePrefix: '/app/translate'
-  },
-  {
-    id: 'store',
-    icon: Library,
-    routePrefix: '/app/library'
-  },
-  {
-    id: 'mini_app',
-    icon: LayoutGrid,
-    routePrefix: '/app/mini-app',
-    exactRouteFocus: true
-  },
-  {
-    id: 'knowledge',
-    icon: FileSearch,
-    routePrefix: '/app/knowledge'
-  },
-  {
     id: 'files',
     icon: Folder,
     routePrefix: '/app/files'
-  },
-  {
-    id: 'code_tools',
-    icon: Code,
-    routePrefix: '/app/code'
-  },
-  {
-    id: 'notes',
-    icon: NotepadText,
-    routePrefix: '/app/notes'
-  },
-  {
-    id: 'openclaw',
-    icon: OpenClawSidebarIcon,
-    routePrefix: '/app/openclaw'
   }
 ]
 
