@@ -1,7 +1,7 @@
 export const TAB_INSTANCE_METADATA_APP_ID = 'instanceAppId'
 export const TAB_INSTANCE_METADATA_KEY = 'instanceKey'
 
-export type TabInstanceAppId = 'assistants' | 'agents'
+export type TabInstanceAppId = 'assistants'
 
 export type TabInstanceMetadata = {
   [TAB_INSTANCE_METADATA_APP_ID]: TabInstanceAppId

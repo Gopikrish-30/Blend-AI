@@ -184,13 +184,77 @@ class CopilotService {
       })
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+        const body = await response.text().catch(() => '(no body)')
+        logger.error(`GitHub device code request failed: HTTP ${response.status}`, { body })
+        throw new Error(`HTTP ${response.status} ${response.statusText} — ${body}`)
       }
 
       return (await response.json()) as AuthResponse
     } catch (error) {
+      const msg = (error as Error).message ?? String(error)
       logger.error('Failed to get auth message:', error as Error)
-      throw new CopilotServiceError('无法获取GitHub授权信息', error)
+      // Include the underlying error message in the CopilotServiceError so it
+      // survives IPC serialization (Electron only transfers `.message`+`.name`).
+      throw new CopilotServiceError(`Failed to start GitHub OAuth device flow: ${msg}`, error)
+    }
+  }
+
+  /**
+   * Authenticate with a GitHub Personal Access Token directly.
+   * Skips the OAuth device flow entirely — useful when the device flow fails
+   * (e.g. third-party client_id revoked by GitHub).
+   */
+  public authWithPat = async (_: Electron.IpcMainInvokeEvent, pat: string): Promise<{ login: string; avatar: string }> => {
+    try {
+      // Verify the PAT by fetching the authenticated user
+      const userResponse = await net.fetch(CONFIG.API_URLS.GITHUB_USER, {
+        method: 'GET',
+        headers: {
+          accept: 'application/json',
+          'user-agent': 'Visual Studio Code (desktop)',
+          authorization: `token ${pat}`
+        }
+      })
+
+      if (!userResponse.ok) {
+        const body = await userResponse.text().catch(() => '(no body)')
+        logger.error(`GitHub user verification failed: HTTP ${userResponse.status}`, { body })
+        throw new Error(`GitHub returned HTTP ${userResponse.status} — check that the PAT is valid and has 'read:user' scope`)
+      }
+
+      const userData = await userResponse.json()
+
+      // Verify the user has Copilot access by exchanging for a Copilot token
+      const copilotResponse = await net.fetch(CONFIG.API_URLS.COPILOT_TOKEN, {
+        method: 'GET',
+        headers: {
+          ...this.headers,
+          authorization: `token ${pat}`
+        }
+      })
+
+      if (!copilotResponse.ok) {
+        const body = await copilotResponse.text().catch(() => '(no body)')
+        logger.error(`Copilot token exchange failed: HTTP ${copilotResponse.status}`, { body })
+        throw new Error(`No GitHub Copilot subscription found for this account (HTTP ${copilotResponse.status})`)
+      }
+
+      // Save the PAT as the stored token (same slot used by device flow)
+      const encryptedToken = safeStorage.encryptString(pat)
+      const dir = path.dirname(this.tokenFilePath)
+      if (!fs.existsSync(dir)) {
+        await fs.promises.mkdir(dir, { recursive: true })
+      }
+      await fs.promises.writeFile(this.tokenFilePath, encryptedToken)
+
+      return {
+        login: userData.login as string,
+        avatar: userData.avatar_url as string
+      }
+    } catch (error) {
+      const msg = (error as Error).message ?? String(error)
+      logger.error('PAT auth failed:', error as Error)
+      throw new CopilotServiceError(`PAT authentication failed: ${msg}`, error)
     }
   }
 

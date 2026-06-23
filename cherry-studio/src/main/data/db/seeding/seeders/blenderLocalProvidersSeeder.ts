@@ -1,9 +1,10 @@
 import type { InsertUserModelRow } from '@data/db/schemas/userModel'
 import { userModelTable } from '@data/db/schemas/userModel'
 import { userProviderTable } from '@data/db/schemas/userProvider'
+import { preferenceTable } from '@data/db/schemas/preference'
 import { insertManyWithOrderKey } from '@data/services/utils/orderKey'
 import { MODEL_CAPABILITY } from '@shared/data/types/model'
-import { eq, inArray } from 'drizzle-orm'
+import { and, eq, inArray, isNull } from 'drizzle-orm'
 
 import type { DbType, ISeeder } from '../../types'
 import { hashObject } from '../hashObject'
@@ -11,6 +12,142 @@ import { hashObject } from '../hashObject'
 type ModelSeed = Omit<InsertUserModelRow, 'orderKey'>
 
 const LOCAL_PROVIDERS = ['lmstudio', 'ollama'] as const
+
+// GitHub Copilot models with function-call support. Seeded so capabilities
+// are set correctly even if the model was synced from the Copilot API before
+// this seeder last ran (the API returns capabilities:[]).
+const COPILOT_FUNCTION_CALL_MODELS: ModelSeed[] = [
+  {
+    id: 'copilot::gpt-4o',
+    providerId: 'copilot',
+    modelId: 'gpt-4o',
+    presetModelId: null,
+    name: 'GPT-4o',
+    description: 'OpenAI GPT-4o via GitHub Copilot. Excellent function calling.',
+    group: 'OpenAI',
+    capabilities: [MODEL_CAPABILITY.FUNCTION_CALL],
+    inputModalities: null,
+    outputModalities: null,
+    endpointTypes: null,
+    customEndpointUrl: null,
+    contextWindow: 128000,
+    maxInputTokens: null,
+    maxOutputTokens: null,
+    supportsStreaming: true,
+    reasoning: null,
+    parameters: null,
+    pricing: null,
+    isEnabled: false,
+    isHidden: false,
+    isDeprecated: false,
+    notes: null,
+    userOverrides: null
+  },
+  {
+    id: 'copilot::gpt-4o-mini',
+    providerId: 'copilot',
+    modelId: 'gpt-4o-mini',
+    presetModelId: null,
+    name: 'GPT-4o Mini',
+    description: 'Fast, cost-effective GPT-4o Mini via GitHub Copilot.',
+    group: 'OpenAI',
+    capabilities: [MODEL_CAPABILITY.FUNCTION_CALL],
+    inputModalities: null,
+    outputModalities: null,
+    endpointTypes: null,
+    customEndpointUrl: null,
+    contextWindow: 128000,
+    maxInputTokens: null,
+    maxOutputTokens: null,
+    supportsStreaming: true,
+    reasoning: null,
+    parameters: null,
+    pricing: null,
+    isEnabled: false,
+    isHidden: false,
+    isDeprecated: false,
+    notes: null,
+    userOverrides: null
+  },
+  {
+    id: 'copilot::claude-3.7-sonnet',
+    providerId: 'copilot',
+    modelId: 'claude-3.7-sonnet',
+    presetModelId: null,
+    name: 'Claude 3.7 Sonnet',
+    description: 'Anthropic Claude 3.7 Sonnet via GitHub Copilot. Excellent for complex tasks.',
+    group: 'Anthropic',
+    capabilities: [MODEL_CAPABILITY.FUNCTION_CALL],
+    inputModalities: null,
+    outputModalities: null,
+    endpointTypes: null,
+    customEndpointUrl: null,
+    contextWindow: 200000,
+    maxInputTokens: null,
+    maxOutputTokens: null,
+    supportsStreaming: true,
+    reasoning: null,
+    parameters: null,
+    pricing: null,
+    isEnabled: false,
+    isHidden: false,
+    isDeprecated: false,
+    notes: null,
+    userOverrides: null
+  },
+  {
+    id: 'copilot::claude-3.5-sonnet',
+    providerId: 'copilot',
+    modelId: 'claude-3.5-sonnet',
+    presetModelId: null,
+    name: 'Claude 3.5 Sonnet',
+    description: 'Anthropic Claude 3.5 Sonnet via GitHub Copilot.',
+    group: 'Anthropic',
+    capabilities: [MODEL_CAPABILITY.FUNCTION_CALL],
+    inputModalities: null,
+    outputModalities: null,
+    endpointTypes: null,
+    customEndpointUrl: null,
+    contextWindow: 200000,
+    maxInputTokens: null,
+    maxOutputTokens: null,
+    supportsStreaming: true,
+    reasoning: null,
+    parameters: null,
+    pricing: null,
+    isEnabled: false,
+    isHidden: false,
+    isDeprecated: false,
+    notes: null,
+    userOverrides: null
+  },
+  {
+    id: 'copilot::o3-mini',
+    providerId: 'copilot',
+    modelId: 'o3-mini',
+    presetModelId: null,
+    name: 'o3-mini',
+    description: 'OpenAI o3-mini reasoning model via GitHub Copilot.',
+    group: 'OpenAI',
+    capabilities: [MODEL_CAPABILITY.FUNCTION_CALL],
+    inputModalities: null,
+    outputModalities: null,
+    endpointTypes: null,
+    customEndpointUrl: null,
+    contextWindow: 200000,
+    maxInputTokens: null,
+    maxOutputTokens: null,
+    supportsStreaming: true,
+    reasoning: null,
+    parameters: null,
+    pricing: null,
+    isEnabled: false,
+    isHidden: false,
+    isDeprecated: false,
+    notes: null,
+    userOverrides: null
+  }
+]
 
 // Groq models known to support function calling — seeded so they appear with
 // the correct capability even before the user manually edits them after a sync.
@@ -150,13 +287,16 @@ const LOCAL_MODEL_SEEDS: ModelSeed[] = [
   }
 ]
 
-const ALL_MODEL_SEEDS = [...LOCAL_MODEL_SEEDS, ...GROQ_FUNCTION_CALL_MODELS]
+const ALL_MODEL_SEEDS = [...LOCAL_MODEL_SEEDS, ...GROQ_FUNCTION_CALL_MODELS, ...COPILOT_FUNCTION_CALL_MODELS]
 
 // Version hash covers seed content — changes here trigger a re-run
+const DEFAULT_MODEL_ID = 'groq::llama-3.3-70b-versatile'
+
 const SEED_DATA = {
-  v: 2,
+  v: 4,
   providers: LOCAL_PROVIDERS,
-  models: ALL_MODEL_SEEDS.map((m) => ({ id: m.id, caps: m.capabilities }))
+  models: ALL_MODEL_SEEDS.map((m) => ({ id: m.id, caps: m.capabilities })),
+  defaultModel: DEFAULT_MODEL_ID
 }
 
 export class BlenderLocalProvidersSeeder implements ISeeder {
@@ -202,6 +342,25 @@ export class BlenderLocalProvidersSeeder implements ISeeder {
           })
         }
       }
+
+      // Set the default model preference so topics with no assistantId can still
+      // resolve a model. Two steps: INSERT is a safety net for edge-case missing
+      // rows; UPDATE fills in the null that PreferenceSeeder writes for fresh
+      // installs. Neither step overwrites a model the user has already chosen.
+      await tx
+        .insert(preferenceTable)
+        .values({ scope: 'default', key: 'chat.default_model_id', value: DEFAULT_MODEL_ID })
+        .onConflictDoNothing()
+      await tx
+        .update(preferenceTable)
+        .set({ value: DEFAULT_MODEL_ID })
+        .where(
+          and(
+            eq(preferenceTable.scope, 'default'),
+            eq(preferenceTable.key, 'chat.default_model_id'),
+            isNull(preferenceTable.value)
+          )
+        )
     })
   }
 }

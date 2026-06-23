@@ -112,15 +112,19 @@ export const VertexPublisherModelsResponseSchema = z.object({
 
 // === GitHub Models ===
 
-export const GitHubModelsResponseSchema = z.array(
-  z.looseObject({
-    id: z.string(),
-    summary: z.string().optional(),
-    publisher: z.string().optional(),
-    name: z.string().optional(),
-    description: z.string().optional(),
-    version: z.string().optional()
-  })
+const GitHubModelItemSchema = z.looseObject({
+  id: z.string(),
+  summary: z.string().optional(),
+  publisher: z.string().optional(),
+  name: z.string().optional(),
+  description: z.string().optional(),
+  version: z.string().optional()
+})
+
+// GitHub catalog API may return either a plain array or { models: [...] }
+export const GitHubModelsResponseSchema = z.preprocess(
+  (v) => (Array.isArray(v) ? v : ((v as any)?.models ?? [])),
+  z.array(GitHubModelItemSchema)
 )
 
 // === Together ===

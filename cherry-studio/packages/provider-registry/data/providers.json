@@ -631,6 +631,9 @@
           "adapterFamily": "openai-compatible"
         }
       },
+      "apiFeatures": {
+        "streamOptions": false
+      },
       "metadata": {
         "website": {
           "official": "https://github.com/marketplace/models",

@@ -3,7 +3,7 @@ import { loggerService } from '@logger'
 import { useCopilot } from '@renderer/hooks/useCopilot'
 import { useProvider } from '@renderer/hooks/useProvider'
 import { cn } from '@renderer/utils'
-import { CheckCircle2, CircleAlert, Copy } from 'lucide-react'
+import { CheckCircle2, CircleAlert, Copy, Key } from 'lucide-react'
 import type { FC } from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -34,6 +34,8 @@ const GithubCopilotSettings: FC<GithubCopilotSettingsProps> = ({ providerId }) =
   const [loading, setLoading] = useState<boolean>(false)
   const [verificationPageOpened, setVerificationPageOpened] = useState<boolean>(false)
   const [currentStep, setCurrentStep] = useState<number>(0)
+  const [showPatInput, setShowPatInput] = useState<boolean>(false)
+  const [patValue, setPatValue] = useState<string>('')
 
   const providerRateLimit = provider?.settings?.rateLimit ?? 10
   const rateLimitRef = useRef(providerRateLimit)
@@ -78,13 +80,47 @@ const GithubCopilotSettings: FC<GithubCopilotSettingsProps> = ({ providerId }) =
         logger.error('Failed to copy to clipboard:', error as Error)
       }
     } catch (error) {
+      const detail = (error as Error).message ?? ''
       logger.error('Failed to get device code:', error as Error)
-      window.toast.error(t('settings.provider.copilot.code_failed'))
+      window.toast.error(`${t('settings.provider.copilot.code_failed')}${detail ? ` — ${detail}` : ''}`)
       setCurrentStep(0)
     } finally {
       setLoading(false)
     }
   }, [t, defaultHeaders])
+
+  const handlePatAuth = useCallback(async () => {
+    if (!patValue.trim()) return
+    try {
+      setLoading(true)
+      const { login, avatar: userAvatar } = await window.api.copilot.authWithPat(patValue.trim())
+      const { token } = await window.api.copilot.getToken(defaultHeaders)
+
+      if (token) {
+        setAuthStatus(AuthStatus.AUTHENTICATED)
+        await addApiKey(token, 'Copilot')
+        await updateProvider({
+          isEnabled: true,
+          providerSettings: {
+            ...provider?.settings,
+            isAuthed: true,
+            oauthUsername: login,
+            oauthAvatar: userAvatar
+          }
+        })
+        updateState({ username: login, avatar: userAvatar })
+        setShowPatInput(false)
+        setPatValue('')
+        window.toast.success(t('settings.provider.copilot.auth_success'))
+      }
+    } catch (error) {
+      const detail = (error as Error).message ?? ''
+      logger.error('PAT auth failed:', error as Error)
+      window.toast.error(`${t('settings.provider.copilot.auth_failed')}${detail ? ` — ${detail}` : ''}`)
+    } finally {
+      setLoading(false)
+    }
+  }, [patValue, t, provider?.settings, addApiKey, updateProvider, updateState, defaultHeaders])
 
   const handleGetToken = useCallback(async () => {
     try {
@@ -150,6 +186,8 @@ const GithubCopilotSettings: FC<GithubCopilotSettingsProps> = ({ providerId }) =
       setVerificationUri('')
       setVerificationPageOpened(false)
       setCurrentStep(0)
+      setShowPatInput(false)
+      setPatValue('')
 
       window.toast.success(t('settings.provider.copilot.logout_success'))
     } catch (error) {
@@ -353,7 +391,7 @@ const GithubCopilotSettings: FC<GithubCopilotSettingsProps> = ({ providerId }) =
 
       default:
         return (
-          <div className="mb-5">
+          <div className="mb-5 flex flex-col gap-3">
             <div className="flex gap-3 rounded-lg border border-info/40 bg-info/10 p-3">
               <CircleAlert className="mt-0.5 size-5 shrink-0 text-info" aria-hidden />
               <div className="min-w-0 flex-1">
@@ -366,6 +404,49 @@ const GithubCopilotSettings: FC<GithubCopilotSettingsProps> = ({ providerId }) =
                 {t('settings.provider.copilot.start_auth')}
               </Button>
             </div>
+
+            {/* PAT fallback — device flow fails when GitHub revokes third-party client IDs */}
+            {!showPatInput ? (
+              <button
+                type="button"
+                className="flex items-center gap-1.5 self-start text-foreground-muted text-xs underline-offset-2 hover:text-foreground hover:underline"
+                onClick={() => setShowPatInput(true)}>
+                <Key className="size-3" />
+                Use a Personal Access Token instead
+              </button>
+            ) : (
+              <div className="flex flex-col gap-2 rounded-lg border border-border bg-muted/40 p-3">
+                <div className="text-foreground text-sm font-medium flex items-center gap-2">
+                  <Key className="size-4 shrink-0" />
+                  Personal Access Token
+                </div>
+                <p className="text-foreground-muted text-xs leading-snug">
+                  Create a token at{' '}
+                  <button
+                    type="button"
+                    className="underline hover:text-foreground"
+                    onClick={() => window.open('https://github.com/settings/tokens/new?scopes=read:user', '_blank')}>
+                    github.com/settings/tokens
+                  </button>{' '}
+                  with <code className="rounded bg-muted px-1">read:user</code> scope, then paste it below.
+                </p>
+                <div className="flex gap-2">
+                  <Input
+                    type="password"
+                    placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                    value={patValue}
+                    onChange={(e) => setPatValue(e.target.value)}
+                    className="font-mono text-xs flex-1"
+                  />
+                  <Button disabled={loading || !patValue.trim()} onClick={handlePatAuth}>
+                    Connect
+                  </Button>
+                  <Button variant="ghost" disabled={loading} onClick={() => { setShowPatInput(false); setPatValue('') }}>
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         )
     }

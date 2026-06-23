@@ -442,7 +442,8 @@ const api = {
     saveCopilotToken: (access_token: string) => ipcRenderer.invoke(IpcChannel.Copilot_SaveCopilotToken, access_token),
     getToken: (headers?: Record<string, string>) => ipcRenderer.invoke(IpcChannel.Copilot_GetToken, headers),
     logout: () => ipcRenderer.invoke(IpcChannel.Copilot_Logout),
-    getUser: (token: string) => ipcRenderer.invoke(IpcChannel.Copilot_GetUser, token)
+    getUser: (token: string) => ipcRenderer.invoke(IpcChannel.Copilot_GetUser, token),
+    authWithPat: (pat: string) => ipcRenderer.invoke(IpcChannel.Copilot_AuthWithPat, pat)
   },
   cherryin: {
     saveToken: (accessToken: string, refreshToken?: string) =>

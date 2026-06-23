@@ -6,7 +6,7 @@ import {
 } from '@shared/types/tabInstanceMetadata'
 
 export function isTabInstanceAppId(value: unknown): value is TabInstanceAppId {
-  return value === 'assistants' || value === 'agents'
+  return value === 'assistants'
 }
 
 export function normalizeTabInstanceMetadata(value: unknown): TabInstanceMetadata | undefined {

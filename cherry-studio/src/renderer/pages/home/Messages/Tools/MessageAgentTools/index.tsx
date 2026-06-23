@@ -12,6 +12,8 @@ export * from './types'
 
 // 导入所有渲染器
 import { AskUserQuestionCard } from '../AskUserQuestionCard'
+import { BlenderPlanCard } from '../BlenderPlanCard'
+import { BlenderQuestionCard } from '../BlenderQuestionCard'
 import ToolPermissionRequestCard from '../ToolPermissionRequestCard'
 import { BashOutputTool } from './BashOutputTool'
 import { BashTool } from './BashTool'
@@ -159,6 +161,26 @@ export function MessageAgentTools({ toolResponse }: { toolResponse: NormalToolRe
     return (
       <StreamingContext value={isLoading}>
         <AskUserQuestionCard toolResponse={toolResponse} />
+      </StreamingContext>
+    )
+  }
+
+  // Blender plan card — interactive Accept/Edit/Reject UI before task execution
+  if (tool?.name === AgentToolsType.BlenderPresentPlan) {
+    const isLoading = status === 'streaming' || status === 'invoking'
+    return (
+      <StreamingContext value={isLoading}>
+        <BlenderPlanCard toolResponse={toolResponse} />
+      </StreamingContext>
+    )
+  }
+
+  // Blender clarifying question card
+  if (tool?.name === AgentToolsType.BlenderAskQuestion) {
+    const isLoading = status === 'streaming' || status === 'invoking'
+    return (
+      <StreamingContext value={isLoading}>
+        <BlenderQuestionCard toolResponse={toolResponse} />
       </StreamingContext>
     )
   }

@@ -3,11 +3,13 @@ import { usePreference } from '@data/hooks/usePreference'
 import { ErrorBoundary } from '@renderer/components/ErrorBoundary'
 import { useCommandHandler } from '@renderer/hooks/command'
 import { useNavbarPosition } from '@renderer/hooks/useNavbar'
+import { useAssistantsApi } from '@renderer/hooks/useAssistant'
 import { useTemporaryTopic } from '@renderer/hooks/useTemporaryTopic'
 import { useActiveTopic, useTopicMutations } from '@renderer/hooks/useTopic'
 import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
 import NavigationService from '@renderer/services/NavigationService'
 import type { Topic } from '@renderer/types'
+import { BLENDER_ASSISTANT_NAME } from '@shared/data/presets/blenderAssistant'
 import { MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH, SECOND_MIN_WINDOW_WIDTH } from '@shared/utils/window'
 import { useLocation, useNavigate } from '@tanstack/react-router'
 import { AnimatePresence, motion } from 'motion/react'
@@ -19,16 +21,11 @@ import Chat from './Chat'
 import Navbar from './Navbar'
 import HomeTabs from './Tabs'
 
-/**
- * Synthesise a renderer Topic shape from a freshly-leased temporary id.
- * First-launch temp topics have no associated assistant — `assistantId` is
- * `undefined`, not a sentinel.
- */
-function buildPendingTemporaryTopic(id: string): Topic {
+function buildPendingTemporaryTopic(id: string, assistantId?: string): Topic {
   const nowIso = new Date().toISOString()
   return {
     id,
-    assistantId: undefined,
+    assistantId,
     name: '',
     createdAt: nowIso,
     updatedAt: nowIso,
@@ -47,17 +44,20 @@ const HomePage: FC = () => {
 
   const [shouldUseTemporary] = useState(() => {
     if (state?.topic) return false
-    if (cacheService.get('topic.home.first_launch_temp_used')) return false
-    cacheService.set('topic.home.first_launch_temp_used', true)
-    return true
+    // Use a temp topic only when there is no cached active topic to restore.
+    // This covers first launch AND re-mounts where the user navigated away
+    // before their first send (useTemporaryTopic cleanup cleared topic.active).
+    return !(cacheService.get('topic.active') as { id: string } | null)?.id
   })
 
-  // Lease a temporary topic only when this is the app's first HomePage mount
-  // and the caller didn't pre-select a topic via router state. The temp topic
-  // has no assistant attached — message capabilities / model fall back to the
-  // `chat.default_model_id` preference.
+  const { assistants } = useAssistantsApi()
+  const blenderAssistantId = assistants.find((a) => a.name === BLENDER_ASSISTANT_NAME)?.id
+
+  // Only lease the temp topic once Blend AI's UUID is known so it's always
+  // bound to the right assistant from the first message.
   const { topicId: tempTopicId, persist: persistTemporaryTopic } = useTemporaryTopic({
-    enabled: shouldUseTemporary
+    enabled: shouldUseTemporary && blenderAssistantId !== undefined,
+    assistantId: blenderAssistantId
   })
 
   const { refreshTopics } = useTopicMutations()
@@ -65,10 +65,10 @@ const HomePage: FC = () => {
   const initialTopic = useMemo<Topic | undefined>(() => {
     if (state?.topic) return state.topic
     if (shouldUseTemporary && tempTopicId) {
-      return buildPendingTemporaryTopic(tempTopicId)
+      return buildPendingTemporaryTopic(tempTopicId, blenderAssistantId)
     }
     return undefined
-  }, [state?.topic, shouldUseTemporary, tempTopicId])
+  }, [state?.topic, shouldUseTemporary, tempTopicId, blenderAssistantId])
 
   const { activeTopic, setActiveTopic } = useActiveTopic(initialTopic, {
     // While we're waiting for the temporary topic to lease, suppress the

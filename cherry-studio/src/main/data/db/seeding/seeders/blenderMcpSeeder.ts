@@ -53,6 +53,9 @@ const getBlenderMcpSeed = () => ({
     BLENDER_HOST: 'localhost',
     BLENDER_PORT: '9876'
   },
+  // All Blender tools must stay inline in request.tools so the model can call
+  // them by name directly (the system prompt references them by name).
+  tags: ['defer:never'],
   isActive: true,
   installSource: 'builtin' as const,
   isTrusted: false,
@@ -80,7 +83,7 @@ export class BlenderMcpSeeder implements ISeeder {
         .limit(1)
 
       if (existing) {
-        // Update approval-gated tools and env if server already exists
+        // Update mutable fields on version bump (tags, approval-gated tools, env, etc.)
         await tx
           .update(mcpServerTable)
           .set({
@@ -88,6 +91,7 @@ export class BlenderMcpSeeder implements ISeeder {
             command: seed.command,
             args: seed.args,
             env: seed.env,
+            tags: seed.tags,
             disabledAutoApproveTools: seed.disabledAutoApproveTools,
             installSource: seed.installSource
           })

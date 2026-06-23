@@ -3,10 +3,8 @@ import ModelAvatar from '@renderer/components/Avatar/ModelAvatar'
 import EmojiIcon from '@renderer/components/EmojiIcon'
 import HorizontalScrollContainer from '@renderer/components/HorizontalScrollContainer'
 import { ModelSelector } from '@renderer/components/ModelSelector'
-import { AssistantSelector } from '@renderer/components/ResourceSelector'
 import { useAssistant } from '@renderer/hooks/useAssistant'
 import { useProviderDisplayName } from '@renderer/hooks/useProvider'
-import { useTopicMutations } from '@renderer/hooks/useTopic'
 import { getLeadingEmoji } from '@renderer/utils'
 import type { Model as SharedModel } from '@shared/data/types/model'
 import { isNonChatModel, isWebSearchModel } from '@shared/utils/model'
@@ -24,20 +22,11 @@ type TopicContentProps = {
 
 const modelFilter = (m: SharedModel) => !isNonChatModel(m)
 
-const TopicContent = ({ assistantId, topicId }: TopicContentProps) => {
+const TopicContent = ({ assistantId, topicId: _topicId }: TopicContentProps) => {
   const { t } = useTranslation()
   const { assistant, model: currentSharedModel, setModel } = useAssistant(assistantId)
-  const { updateTopic } = useTopicMutations()
   const assistantName = useMemo(() => assistant?.name || t('chat.default.name'), [assistant?.name, t])
   const providerName = useProviderDisplayName(currentSharedModel?.providerId)
-
-  const handleAssistantChange = useCallback(
-    async (nextId: string | null) => {
-      if (!nextId || nextId === assistantId) return
-      await updateTopic(topicId, { assistantId: nextId })
-    },
-    [assistantId, topicId, updateTopic]
-  )
 
   const handleModelSelect = useCallback(
     (model: SharedModel | undefined) => {
@@ -52,17 +41,10 @@ const TopicContent = ({ assistantId, topicId }: TopicContentProps) => {
     <>
       <HorizontalScrollContainer className="ml-2 flex-initial">
         <div className="flex flex-nowrap items-center gap-2">
-          <AssistantSelector
-            value={assistantId ?? null}
-            onChange={handleAssistantChange}
-            trigger={
-              <Button variant="ghost" size="sm" className="h-7 gap-1.5 rounded-full px-2 text-xs">
-                <EmojiIcon emoji={assistant?.emoji || getLeadingEmoji(assistantName)} size={20} />
-                <span className="max-w-40 truncate">{assistantName}</span>
-                <ChevronDown size={14} className="text-muted-foreground" />
-              </Button>
-            }
-          />
+          <div className="flex h-7 items-center gap-1.5 rounded-full px-2 text-xs">
+            <EmojiIcon emoji={assistant?.emoji || getLeadingEmoji(assistantName)} size={20} />
+            <span className="max-w-40 truncate font-medium">{assistantName}</span>
+          </div>
 
           <ModelSelector
             multiple={false}

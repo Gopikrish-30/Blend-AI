@@ -116,6 +116,7 @@ export enum IpcChannel {
   Copilot_GetToken = 'copilot:get-token',
   Copilot_Logout = 'copilot:logout',
   Copilot_GetUser = 'copilot:get-user',
+  Copilot_AuthWithPat = 'copilot:auth-with-pat',
 
   // CherryIN OAuth
   CherryIN_SaveToken = 'cherryin:save-token',

@@ -83,7 +83,11 @@ const V2ChatContent: FC<Props> = ({ topic, setActiveTopic, onPersistTemporaryTop
     mutate: messagesCacheMutate
   } = useTopicMessagesV2(topic.id, { enabled: !isFreshTemporaryTopic })
 
-  if (isHistoryLoading) {
+  // When the temp topic was just persisted, we know it has 0 messages in the
+  // DB. Skipping the loading gate here keeps V2ChatContentInner mounted so the
+  // pending message overlay (addPending) is not destroyed by the brief
+  // isReady=false window that useTopicMessagesV2 enters when enabled flips.
+  if (isHistoryLoading && !hasPersistedTemporaryTopic) {
     return (
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center">
         <div className="text-sm" style={{ color: 'var(--color-text-3)' }}>

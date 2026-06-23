@@ -617,12 +617,12 @@ export const SYSTEM_MODELS: Record<SystemProviderId | 'defaultModel', Model[]> =
     }
   ],
   copilot: [
-    {
-      id: 'gpt-5-mini',
-      provider: 'copilot',
-      name: 'gpt-5-mini',
-      group: 'copilot'
-    }
+    { id: 'gpt-4o', provider: 'copilot', name: 'GPT-4o', group: 'OpenAI' },
+    { id: 'gpt-4o-mini', provider: 'copilot', name: 'GPT-4o Mini', group: 'OpenAI' },
+    { id: 'claude-3.7-sonnet', provider: 'copilot', name: 'Claude 3.7 Sonnet', group: 'Anthropic' },
+    { id: 'claude-3.5-sonnet', provider: 'copilot', name: 'Claude 3.5 Sonnet', group: 'Anthropic' },
+    { id: 'o3-mini', provider: 'copilot', name: 'o3-mini', group: 'OpenAI' },
+    { id: 'gemini-2.0-flash', provider: 'copilot', name: 'Gemini 2.0 Flash', group: 'Google' }
   ],
   yi: [
     { id: 'yi-lightning', name: 'Yi Lightning', provider: 'yi', group: 'yi-lightning', owned_by: '01.ai' },

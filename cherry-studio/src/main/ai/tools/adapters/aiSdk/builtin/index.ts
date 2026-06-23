@@ -10,6 +10,7 @@
  */
 
 import { registry, type ToolRegistry } from '../registry'
+import { createBlenderPlanToolEntry, createBlenderQuestionToolEntry } from './BlenderInteractionTools'
 import { createKbListToolEntry } from './KnowledgeListTool'
 import { createKbSearchToolEntry } from './KnowledgeSearchTool'
 import { createWebFetchToolEntry } from './WebFetchTool'
@@ -20,4 +21,6 @@ export function registerBuiltinTools(reg: ToolRegistry = registry): void {
   reg.register(createKbSearchToolEntry())
   reg.register(createWebFetchToolEntry())
   reg.register(createWebSearchToolEntry())
+  reg.register(createBlenderPlanToolEntry())
+  reg.register(createBlenderQuestionToolEntry())
 }

@@ -19,7 +19,9 @@ export enum AgentToolsType {
   NotebookEdit = 'NotebookEdit',
   ExitPlanMode = 'ExitPlanMode',
   AskUserQuestion = 'AskUserQuestion',
-  ToolSearch = 'ToolSearch'
+  ToolSearch = 'ToolSearch',
+  BlenderPresentPlan = 'present_plan',
+  BlenderAskQuestion = 'ask_clarifying_question'
 }
 
 export type TextOutput = {
