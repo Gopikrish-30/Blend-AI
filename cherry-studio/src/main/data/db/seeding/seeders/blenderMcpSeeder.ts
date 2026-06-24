@@ -56,6 +56,12 @@ const getBlenderMcpSeed = () => ({
   // All Blender tools must stay inline in request.tools so the model can call
   // them by name directly (the system prompt references them by name).
   tags: ['defer:never'],
+  // Asset downloads (PolyHaven, Sketchfab) and Blender scene ops can take
+  // longer than the default 60s. 300s covers large model downloads; Hyper3D/
+  // Hunyuan3D generation (30-90s) is polled separately so this doesn't apply.
+  // The longRunning heartbeat resets this timer every 20s, so 300s is a fallback.
+  timeout: 300,
+  longRunning: true,
   isActive: true,
   installSource: 'builtin' as const,
   isTrusted: false,
@@ -92,6 +98,8 @@ export class BlenderMcpSeeder implements ISeeder {
             args: seed.args,
             env: seed.env,
             tags: seed.tags,
+            timeout: seed.timeout,
+            longRunning: seed.longRunning,
             disabledAutoApproveTools: seed.disabledAutoApproveTools,
             installSource: seed.installSource
           })

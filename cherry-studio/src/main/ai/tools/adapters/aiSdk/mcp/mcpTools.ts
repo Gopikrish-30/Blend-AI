@@ -107,11 +107,22 @@ function createMcpTool(mcpTool: McpTool, forcePrompt: boolean): Tool {
     description: mcpTool.description || mcpTool.name,
     inputSchema: jsonSchema(liberalizedSchema),
     needsApproval: async () => forcePrompt,
-    execute: async (rawArgs: Record<string, unknown>, { toolCallId }) => {
+    execute: async (rawArgs: Record<string, unknown>, { toolCallId, abortSignal }) => {
       const args = coerceArgs(rawArgs, originalSchema)
       const server = await resolveActiveServerById(mcpTool.serverId)
       if (!server) {
         throw new Error(`MCP server ${mcpTool.serverId} is not active or no longer registered`)
+      }
+      // When the AI stream is aborted (user clicks stop), propagate to the
+      // in-flight MCP tool call so it doesn't block for its full timeout.
+      if (abortSignal) {
+        abortSignal.addEventListener(
+          'abort',
+          () => {
+            void application.get('McpRuntimeService').abortTool(toolCallId)
+          },
+          { once: true }
+        )
       }
       const result: McpCallToolResponse = await application.get('McpRuntimeService').callTool({
         serverId: server.id,

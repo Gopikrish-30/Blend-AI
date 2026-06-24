@@ -217,6 +217,21 @@ mcp = FastMCP(
 _blender_connection = None
 _polyhaven_enabled = False  # Add this global variable
 
+async def _progress_heartbeat(ctx: Context, interval: float = 20.0) -> None:
+    """Ping progress every `interval` seconds so McpRuntimeService resets its longRunning timeout."""
+    count = 0
+    try:
+        while True:
+            await asyncio.sleep(interval)
+            count += 1
+            try:
+                await ctx.report_progress(count, 0)
+            except Exception:
+                pass
+    except asyncio.CancelledError:
+        pass
+
+
 def get_blender_connection():
     """Get or create a persistent Blender connection"""
     global _blender_connection, _polyhaven_enabled  # Add _polyhaven_enabled to globals
@@ -477,7 +492,7 @@ def search_polyhaven_assets(
 
 @mcp.tool()
 @rich_telemetry_tool("download_polyhaven_asset")
-def download_polyhaven_asset(
+async def download_polyhaven_asset(
     ctx: Context,
     asset_id: str,
     asset_type: str,
@@ -499,19 +514,27 @@ def download_polyhaven_asset(
     """
     try:
         blender = get_blender_connection()
-        result = blender.send_command("download_polyhaven_asset", {
-            "asset_id": asset_id,
-            "asset_type": asset_type,
-            "resolution": resolution,
-            "file_format": file_format
-        })
-        
+        await ctx.report_progress(0, 0)
+        heartbeat = asyncio.create_task(_progress_heartbeat(ctx))
+        try:
+            result = await asyncio.to_thread(
+                lambda: blender.send_command("download_polyhaven_asset", {
+                    "asset_id": asset_id,
+                    "asset_type": asset_type,
+                    "resolution": resolution,
+                    "file_format": file_format
+                })
+            )
+        finally:
+            heartbeat.cancel()
+            await asyncio.gather(heartbeat, return_exceptions=True)
+
         if "error" in result:
             return f"Error: {result['error']}"
-        
+
         if result.get("success"):
             message = result.get("message", "Asset downloaded and imported successfully")
-            
+
             # Add additional information based on asset type
             if asset_type == "hdris":
                 return f"{message}. The HDRI has been set as the world environment."
@@ -765,14 +788,14 @@ def get_sketchfab_model_preview(
 
 @mcp.tool()
 @rich_telemetry_tool("download_sketchfab_model")
-def download_sketchfab_model(
+async def download_sketchfab_model(
     ctx: Context,
     uid: str,
     target_size: float, user_prompt: str = "") -> str:
     """
     Download and import a Sketchfab model by its UID.
     The model will be scaled so its largest dimension equals target_size.
-    
+
     Parameters:
     - uid: The unique identifier of the Sketchfab model
     - target_size: REQUIRED. The target size in Blender units/meters for the largest dimension.
@@ -783,50 +806,57 @@ def download_sketchfab_model(
                   - Car: target_size=4.5 (4.5 meters long)
                   - Person: target_size=1.7 (1.7 meters tall)
                   - Small object (cup, phone): target_size=0.1 to 0.3
-    
+
     Returns a message with import details including object names, dimensions, and bounding box.
     The model must be downloadable and you must have proper access rights.
     """
     try:
         blender = get_blender_connection()
         logger.info(f"Downloading Sketchfab model: {uid}, target_size={target_size}")
-        
-        result = blender.send_command("download_sketchfab_model", {
-            "uid": uid,
-            "normalize_size": True,  # Always normalize
-            "target_size": target_size
-        })
-        
+        await ctx.report_progress(0, 0)
+        heartbeat = asyncio.create_task(_progress_heartbeat(ctx))
+        try:
+            result = await asyncio.to_thread(
+                lambda: blender.send_command("download_sketchfab_model", {
+                    "uid": uid,
+                    "normalize_size": True,
+                    "target_size": target_size
+                })
+            )
+        finally:
+            heartbeat.cancel()
+            await asyncio.gather(heartbeat, return_exceptions=True)
+
         if result is None:
             logger.error("Received None result from Sketchfab download")
             return "Error: Received no response from Sketchfab download request"
-            
+
         if "error" in result:
             logger.error(f"Error from Sketchfab download: {result['error']}")
             return f"Error: {result['error']}"
-        
+
         if result.get("success"):
             imported_objects = result.get("imported_objects", [])
             object_names = ", ".join(imported_objects) if imported_objects else "none"
-            
+
             output = f"Successfully imported model.\n"
             output += f"Created objects: {object_names}\n"
-            
+
             # Add dimension info if available
             if result.get("dimensions"):
                 dims = result["dimensions"]
                 output += f"Dimensions (X, Y, Z): {dims[0]:.3f} x {dims[1]:.3f} x {dims[2]:.3f} meters\n"
-            
+
             # Add bounding box info if available
             if result.get("world_bounding_box"):
                 bbox = result["world_bounding_box"]
                 output += f"Bounding box: min={bbox[0]}, max={bbox[1]}\n"
-            
+
             # Add normalization info if applied
             if result.get("normalized"):
                 scale = result.get("scale_applied", 1.0)
                 output += f"Size normalized: scale factor {scale:.6f} applied (target size: {target_size}m)\n"
-            
+
             return output
         else:
             return f"Failed to download model: {result.get('message', 'Unknown error')}"
@@ -983,7 +1013,7 @@ def poll_rodin_job_status(
 
 @mcp.tool()
 @rich_telemetry_tool("import_generated_asset")
-def import_generated_asset(
+async def import_generated_asset(
     ctx: Context,
     name: str,
     task_uuid: Optional[str] = None,
@@ -1002,18 +1032,24 @@ def import_generated_asset(
     """
     try:
         blender = get_blender_connection()
-        kwargs = {
-            "name": name
-        }
+        kwargs: dict = {"name": name}
         if task_uuid:
             kwargs["task_uuid"] = task_uuid
         elif request_id:
             kwargs["request_id"] = request_id
-        result = blender.send_command("import_generated_asset", kwargs)
+        await ctx.report_progress(0, 0)
+        heartbeat = asyncio.create_task(_progress_heartbeat(ctx))
+        try:
+            result = await asyncio.to_thread(
+                lambda: blender.send_command("import_generated_asset", kwargs)
+            )
+        finally:
+            heartbeat.cancel()
+            await asyncio.gather(heartbeat, return_exceptions=True)
         return result
     except Exception as e:
-        logger.error(f"Error generating Hyper3D task: {str(e)}")
-        return f"Error generating Hyper3D task: {str(e)}"
+        logger.error(f"Error importing Hyper3D asset: {str(e)}")
+        return f"Error importing Hyper3D asset: {str(e)}"
 
 @mcp.tool()
 def get_hunyuan3d_status(ctx: Context, user_prompt: str = "") -> str:
@@ -1098,7 +1134,7 @@ def poll_hunyuan_job_status(
 
 @mcp.tool()
 @rich_telemetry_tool("import_generated_asset_hunyuan")
-def import_generated_asset_hunyuan(
+async def import_generated_asset_hunyuan(
     ctx: Context,
     name: str,
     zip_file_url: str,
@@ -1114,16 +1150,22 @@ def import_generated_asset_hunyuan(
     """
     try:
         blender = get_blender_connection()
-        kwargs = {
-            "name": name
-        }
+        kwargs: dict = {"name": name}
         if zip_file_url:
             kwargs["zip_file_url"] = zip_file_url
-        result = blender.send_command("import_generated_asset_hunyuan", kwargs)
+        await ctx.report_progress(0, 0)
+        heartbeat = asyncio.create_task(_progress_heartbeat(ctx))
+        try:
+            result = await asyncio.to_thread(
+                lambda: blender.send_command("import_generated_asset_hunyuan", kwargs)
+            )
+        finally:
+            heartbeat.cancel()
+            await asyncio.gather(heartbeat, return_exceptions=True)
         return result
     except Exception as e:
-        logger.error(f"Error generating Hunyuan3D task: {str(e)}")
-        return f"Error generating Hunyuan3D task: {str(e)}"
+        logger.error(f"Error importing Hunyuan3D asset: {str(e)}")
+        return f"Error importing Hunyuan3D asset: {str(e)}"
 
 
 @mcp.prompt()
